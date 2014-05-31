@@ -1,0 +1,15 @@
+#!/bin/sh
+LOCKFILE="/tmp/playOrStop.`whoami`.lock"
+read CURRENT_PID CURRENT_FILE < "$LOCKFILE"
+
+trap 'kill $(jobs -p)' EXIT
+
+kill $CURRENT_PID
+rm /tmp/playOrStop.`whoami`.lock
+
+if [ "$CURRENT_FILE" = "$1" ]; then
+    exit
+fi
+
+echo "$$ $1" > "$LOCKFILE"
+mplayer "$1"

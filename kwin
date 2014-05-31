@@ -1,0 +1,220 @@
+#!/bin/bash
+
+case "$1" in
+    reconfig|reconfigure)
+    qdbus org.kde.kwin /KWin reconfigure
+    exit
+    ;;
+    grabbers)
+    DELAY=$2
+    if [ ! -z $DELAY ]; then
+        PDLG=`kdialog --progressbar "Grabbers determined in $DELAY seconds" $DELAY`
+        qdbus $PDLG Set org.kde.kdialog.ProgressDialog value $DELAY
+        while ((DELAY--)); do
+            sleep 1 > /dev/null
+            qdbus $PDLG setLabelText "Grabbers determined in $DELAY seconds" > /dev/null
+            qdbus $PDLG Set org.kde.kdialog.ProgressDialog value $DELAY > /dev/null
+        done
+        qdbus $PDLG close > /dev/null
+    fi
+    xdotool key "XF86LogGrabInfo"
+    sleep 1
+    sed -n 'H; /Printing all currently active device grabs/h; ${g;p;}' /var/log/Xorg.0.log > /tmp/kwin_loadscript.grabbers
+    kdialog --title "KWin Support Information" --textbox /tmp/kwin_loadscript.grabbers 480 280 &
+    exit
+    ;;
+    config|configure)
+    case "$2" in
+        compositing|effects|fx|FX)
+        kcmshell4 kwincompositing &
+        ;;
+        deco|decoration|titlebar|buttons)
+        kcmshell4 kwindecoration &
+        ;;
+        rules)
+        kcmshell4 kwinrules &
+        ;;
+        scripts)
+        kcmshell4 kwinscripts &
+        ;;
+        switcher|tabbox)
+        kcmshell4 kwintabbox &
+        ;;
+        desktops|VD|virtualdesktops)
+        kcmshell4 desktop &
+        ;;
+        screenedges|screenborders|quicktiling|aerosnap)
+        kcmshell4 kwinscreenedges &
+        ;;
+        *)
+        kcmshell4 kwinoptions &
+        ;;
+    esac
+    exit
+    ;;
+    support|supportinfo|supportInformation)
+    qdbus org.kde.kwin /KWin supportInformation > /tmp/kwin_loadscript.supportInfo
+    kdialog --title "KWin Support Information" --textbox /tmp/kwin_loadscript.supportInfo 640 600 &
+    sleep 5 # should be sufficient to read the file - kdialog does not take /dev/stdin
+    rm /tmp/kwin_loadscript.supportInfo
+    exit
+    ;;
+    install|installScript)
+    META="`unzip -l screenSnapping.kwinscript | grep metadata.desktop`"
+    META=${META##* }
+    TARGET="`kde4-config --path data`"
+    SERVICES="`kde4-config --path services`"
+    if [ "$3" == "g" ]; then # globally
+        if [ $UID != 0 ]; then
+            sudo "$0" "$@"
+            exit
+        fi
+        TARGET=${TARGET##*:}
+        SERVICES=${SERVICES##*:}
+    else
+        TARGET=${TARGET%%:*}
+        SERVICES=${SERVICES%%:*}
+    fi
+    TARGET="${TARGET}kwin/scripts/"
+    mkdir -p "$TARGET"
+    if ! unzip -o "$2" -d "$TARGET"; then
+        exit 1
+    fi
+    NAME=`grep "X-KDE-PluginInfo-Name" "${TARGET}${META}"`
+    NAME=${NAME#*=}
+    cp -v "${TARGET}${META}" "${SERVICES}kwin-script-${NAME}.desktop"
+    kbuildsycoca4
+    exit 0
+    ;;
+    *)
+esac
+
+# Nvidia performs a busy wait on double buffered swapping
+# Also USLEEP has the advance over the default sched_yield (unset the variable) of 
+# a limited yield without causing the  CPU load of "NOTHING"
+export __GL_YIELD="USLEEP"
+
+# Antialiasing would only make sense for few effects like the cube or coverflow,
+# but not only cause major overhead but even be rather a problem when the screen is
+# not transformed (false pixels)
+export __GL_FSAA_MODE=0
+
+# There's absolutely no need for anisotropic filtering
+export __GL_LOG_MAX_ANISO=0
+
+# The environment variable KWIN_COMPOSE enforces a compositing
+# backend or forces compositing completely off.
+# The following values are supported:
+    #  O: OpenGL backend (either OpenGL 1, OpenGL 2 or OpenGL ES 2.0)
+    # O1: OpenGL 1 backend
+    # O2: OpenGL 2 backend
+    #  X: XRender backend
+    #  N: No Compositing
+# export KWIN_COMPOSE=
+
+# Select whether to use EGL or GLX (this is not equal to OpenGL ES!)
+# reasonable parameters are "glx" or "egl", "glx" being the default
+# export KWIN_OPENGL_INTERFACE=egl
+
+
+# KWin determines whether LIBGL_ALWAYS_INDIRECT has to be set by 
+# an external helper application and a driver whitelist of the drivers
+# known to perform well with direct rendering.
+# By setting the environment variable KWIN_DIRECT_GL to 1 the checks
+# are not performed and LIBGL_ALWAYS_INDIRECT is not set.
+# KWIN_DIRECT_GL=1
+
+# In case the test for indirection requirement fails, you can still set it here
+# export LIBGL_ALWAYS_INDIRECT=1
+
+
+# By setting KWIN_GL_DEBUG to 1 the OpenGL rendering can be debugged visually.
+# All geometries which are rendered are overlayed by a wireframe.
+#The  wireframe is not available in OpenGL ES 2.0.
+# export KWIN_GL_DEBUG=1
+
+# KWin tries to detect this at runtime by measuring the time a swap consumes
+# Since that is only heuristical, you can override the mechanism by exporting
+# either KWIN_TRIPLE_BUFFER=1 (triple or more buffering) or KWIN_TRIPLE_BUFFER=0 (double buffering)
+# export KWIN_TRIPLE_BUFFER=1
+
+# The lanczos filter is controlled by the scale method in the advanced compositing settings
+# and a blacklist of drivers known to break with this filter.
+# The setting and the blacklist can be overruled by setting KWIN_FORCE_LANCZOS to 1.
+# export KWIN_FORCE_LANCZOS=1
+
+# By setting KWIN_OPENGL_INTERFACE to "egl" the OpenGL based compositor uses 
+# the EGL platform interface instead of the GLX.
+# export KWIN_OPENGL_INTERFACE="egl"
+
+# Buffer_Age is a relatively new OpenGL extension which allows to re-use screen contents without
+# reading the frontbuffer (what ca be very expensive)
+# It's used when available, but since it's new, it could be broken
+#export KWIN_USE_BUFFER_AGE=0
+
+### BELOW IS LAUNCHING ==========================================
+
+# calling /usr/bin/kwin with full path breaks session restorage
+# -> therefore get rid of our path from $PATH and call the remaining kwin with path resolution
+REAL_PATH="`realpath $0`"
+BASE_NAME="`basename $REAL_PATH`"
+DROP_PATH=${REAL_PATH%/${BASE_NAME}}
+export PATH="$(echo $PATH | sed -e "s%${DROP_PATH}/*:*%%g")"
+
+# Read the FXAA mode
+# A special antialiasing which is not controlled by __GL_FSAA_MODE  and causes strong blurring
+FXAA=`nvidia-settings -tq FXAA 2>/dev/null`
+if [ "${FXAA}" = "1" ]; then
+    # Turn it off
+    nvidia-settings -a FXAA=0 > /dev/null 2>&1
+    kwin --replace "$@" &
+    # wait ten seconds, FXAA is interpreted when creating the context
+    sleep 10
+    # reset FXAA
+    nvidia-settings -a FXAA=${FXAA} > /dev/null 2>&1
+else
+    kwin --replace "$@" &
+fi
+
+
+exit 0
+
+# since i do not yet fully trust PATH manipulation -> keep old code around
+
+THIS_BIN=`realpath $0`
+BINARY=`basename $0`
+GLES=`kreadconfig --file kwinrc --group Compositing --key GLES 2>/dev/null`
+if [ "${GLES}" = "true" ]; then
+    BINARIES=(${BINARY}_gles ${BINARY})
+else
+    BINARIES=(${BINARY} ${BINARY}_gles)
+fi
+
+IFS=':' EXEC_PATHS=`kde4-config --path exe`
+for BINARY in ${BINARIES}; do
+    for EXEC_PATH in ${EXEC_PATHS}; do
+        if [ "${EXEC_PATH}${BINARY}" = "$THIS_BIN" ]; then
+            continue;
+        fi
+        if [ -e "${EXEC_PATH}${BINARY}" ]; then
+#            echo "$THIS_BIN started ${EXEC_PATH}${BINARY}" > /tmp/kwin.log
+            # Read the FXAA mode
+            # A special antialiasing which is not controlled by __GL_FSAA_MODE  and causes strong blurring
+            FXAA=`nvidia-settings -tq FXAA 2>/dev/null`
+            if [ "${FXAA}" = "1" ]; then
+                # Turn it off
+                nvidia-settings -a FXAA=0 > /dev/null 2>&1
+                ${EXEC_PATH}${BINARY} --replace "$@" &
+                # wait ten seconds, FXAA is interpreted when creating the context
+                sleep 10
+                # reset FXAA
+                nvidia-settings -a FXAA=${FXAA} > /dev/null 2>&1
+            else
+                ${EXEC_PATH}${BINARY} --replace "$@" &
+            fi
+            exit 0
+        fi
+    done
+done
+
+exit 1

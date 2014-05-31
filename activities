@@ -1,0 +1,132 @@
+#!/bin/sh
+
+DBUS="qdbus org.kde.ActivityManager /ActivityManager/Activities"
+STATES=("Invalid" "Unknown" "Running" "Starting" "Stopped" "Stopping")
+CMD=$1
+
+a_id() {
+    activities=`$DBUS ListActivities`
+    (echo "$activities" | grep $1) && exit
+    for activity in $activities; do
+        if [ "`$DBUS ActivityName "$activity"`" = "$1" ]; then
+            echo "$activity"
+            exit
+        fi
+    done
+}
+
+list_a() {
+    for activity in "$@"; do
+        STATE=`$DBUS ActivityState "$activity"`
+        echo "$activity (\"`$DBUS ActivityName "$activity"`\") : $STATE (\"${STATES[$STATE]}\")"
+#         echo "`$DBUS ActivityDescription "$activity"`"
+#         echo "-------------------------------------------"
+    done
+}
+
+rescue_windows() {
+    CURRENT=`$DBUS CurrentActivity`
+    LIST=`$DBUS ListActivities`
+
+    if [ "$1" = "force" ]; then
+
+        echo -e "-------------------------\nCurrent Activity:\n$CURRENT\n\nAll Activities:\n$LIST\n========================\n\nWithdrawing activity properties ...\n"
+        for ID in `xwininfo -root -tree | sed 's/ \+/ /g; s/ //; s/ .*//g; /x/!d; /xwinin/d'`; do
+            xprop -remove _KDE_NET_WM_ACTIVITIES -id $ID
+        done
+
+    else
+
+        echo -e "-------------------------\nCurrent Activity:\n$CURRENT\n\nAll Activities:\n$LIST\n========================\n\nChecking ...\n"
+        ALRIGHT=true
+        for ID in `xwininfo -root -tree | sed 's/ \+/ /g; s/ //; s/ .*//g; /x/!d; /xwinin/d'`; do
+            ACTIVITY=`xprop _KDE_NET_WM_ACTIVITIES -id $ID`
+            if [ "${ACTIVITY/*=*/+++}" = "+++" ]; then
+                ACTIVITY="${ACTIVITY#* = }"
+                ACTIVITY="${ACTIVITY/\"}"
+                ACTIVITY="${ACTIVITY/\"}"
+                if [ "$ACTIVITY" != "00000000-0000-0000-0000-000000000000" ]; then
+                    ACTIVITIES=`echo $ACTIVITY | sed 's/,/ /g'`
+                    for ACTIVITY in $ACTIVITIES; do
+                        MATCH=`echo $LIST | grep "$ACTIVITY"`
+                        if [ -z "$MATCH" ]; then
+                            TITLE="`xprop _NET_WM_NAME -id $ID`"
+                            TITLE="${TITLE#* = }"
+                            ALRIGHT=false
+                            echo "WARNING: Window $ID on invalid Activity $ACTIVITY - ($TITLE)"
+                            xprop -remove _KDE_NET_WM_ACTIVITIES -id $ID
+                        fi
+                    done
+                fi
+            fi
+        done
+
+        if $ALRIGHT; then
+            echo -e "Everything Ok.\nAll Windows are on existing activities. Maybe on a stopped one?\n"
+        fi
+
+    fi
+}
+
+case "$CMD" in
+    list|l)
+        if [ -z "$2" ]; then
+            list_a `$DBUS ListActivities`
+        else
+            list_a `$DBUS ListActivities $2`
+        fi
+        ;;
+    current|c)
+        activity="`$DBUS CurrentActivity`"
+        echo "$activity (\"`$DBUS ActivityName "$activity"`\")"
+        ;;
+    activate|setCurrent)
+        $DBUS SetCurrentActivity `a_id "$2"`
+        ;;
+    start)
+        if [ -z "$2" ]; then
+            $DBUS Start
+        else
+            $DBUS StartActivity `a_id "$2"`
+        fi
+        ;;
+    stop)
+        if [ -z "$2" ]; then
+            $DBUS Stop
+        else
+            $DBUS StopActivity `a_id "$2"`
+        fi
+        ;;
+    rename)
+        if [ -z "$2" ] || [ -z "$3" ]; then
+            echo "please pass id and name"
+        else
+            $DBUS SetActivityName `a_id "$2"` "$3"
+        fi
+        ;;
+    remove|delete|rm|del|d)
+        iid=`a_id "$2"`
+        $DBUS StopActivity "$iid"
+        $DBUS RemoveActivity "$iid"
+        ;;
+    add|a)
+        $DBUS AddActivity "$2"
+        ;;
+    rescue)
+        rescue_windows $2
+        ;;
+    *)
+        echo -e "\nCommands:\n\
+----------\n\
+list|l [status]
+current|c
+activate|setCurrent <id_or_name>
+start <id_or_name>
+stop  <id_or_name>
+rename <id_or_name> <new_name>
+remove|delete|rm|del|d  <id_or_name>
+add|a <name>
+rescue [force] ### this strips [also valid] activity information from all windows
+=================================================================================\n"
+esac
+

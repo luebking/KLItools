@@ -1,0 +1,113 @@
+#!/bin/sh
+
+
+# Field 1, what fields apply:
+# ---------------------------
+# 1 MWM_HINTS_FUNCTIONS
+# 2 MWM_HINTS_DECORATIONS
+# 4 MWM_HINTS_INPUT_MODE
+#
+#
+# Field 2, MWM_HINTS_FUNCTIONS:
+# -----------------------------
+#  1 MWM_FUNC_ALL         If set, remove functions from full set
+#  2 MWM_FUNC_RESIZE      f.resize
+#  4 MWM_FUNC_MOVE        f.move
+#  8 MWM_FUNC_MINIMIZE    f.minimize
+# 16 MWM_FUNC_MAXIMIZE    f.maximize
+# 32 MWM_FUNC_CLOSE       f.kill
+#
+#
+# Field 3, MWM_HINTS_DECORATIONS:
+# -------------------------------
+#  1 MWM_DECOR_ALL        If set, remove decorations from full set
+#  2 MWM_DECOR_BORDER     Client window border
+#  4 MWM_DECOR_RESIZEH    Resize frame handles
+#  8 MWM_DECOR_TITLE      Title bar
+# 16 MWM_DECOR_MENU       Window menu button
+# 32 MWM_DECOR_MINIMIZE   Minimize window button
+# 64 MWM_DECOR_MAXIMIZE   Maximize window button
+#
+#
+# Field 4, MWM_HINTS_INPUT_MODE:
+# -----------------------------
+# 0 MWM_INPUT_MODELESS                    Input goes to any window
+# 1 MWM_INPUT_PRIMARY_APPLICATION_MODAL   Input does not go to ancestors of this window
+# 2 MWM_INPUT_SYSTEM_MODAL                Input goes only to this window
+# 3 MWM_INPUT_FULL_APPLICATION_MODAL      Input does not go to other windows in this application
+
+FIRST=true
+HUMAN_HINTS="\nOnly the fields mentioned in the first field are to be considered\n"
+HUMAN_HINTS="${HUMAN_HINTS}NOTICE that MWM_*_ALL indicates to DISABLE either ALL items or the ones passed in addition!\n"
+HUMAN_HINTS="${HUMAN_HINTS}--------------------------------------------------------------\n"
+
+append() {
+    if ((${1} & ${2})); then
+        if ! $FIRST; then
+            HUMAN_HINTS="${HUMAN_HINTS} | "
+        fi
+        FIRST=false
+        HUMAN_HINTS="${HUMAN_HINTS}${3}"
+    fi
+}
+
+if [ -z "$1" ]; then
+    MOTIF_HINTS="`xprop _MOTIF_WM_HINTS`"
+else
+    MOTIF_HINTS="$1"
+fi
+
+MOTIF_HINTS=${MOTIF_HINTS#* =}
+if [[ ! "$MOTIF_HINTS" = *","* ]]; then
+    echo "Seems no _MOTIF_WM_HINTS are provided, try 'xprop _MOTIF_WM_HINTS' for verification"
+    exit
+fi
+
+FLAGS=${MOTIF_HINTS%%, *}
+MOTIF_HINTS=${MOTIF_HINTS#*, }
+echo $FLAGS
+FIRST=true
+HUMAN_HINTS="${HUMAN_HINTS}1: "
+append $FLAGS 1 "MWM_HINTS_FUNCTIONS"
+append $FLAGS 2 "MWM_HINTS_DECORATIONS"
+append $FLAGS 4 "MWM_HINTS_INPUT_MODE"
+HUMAN_HINTS="${HUMAN_HINTS}\n"
+
+FUNC=${MOTIF_HINTS%%, *}
+MOTIF_HINTS=${MOTIF_HINTS#*, }
+echo $FUNC
+FIRST=true
+HUMAN_HINTS="${HUMAN_HINTS}2: "
+append $FUNC 1 "MWM_FUNC_ALL"
+append $FUNC 2 "MWM_FUNC_RESIZE"
+append $FUNC 4 "MWM_FUNC_MOVE"
+append $FUNC 8 "MWM_FUNC_MINIMIZE"
+append $FUNC 16 "MWM_FUNC_MAXIMIZE"
+append $FUNC 32 "MWM_FUNC_CLOSE"
+HUMAN_HINTS="${HUMAN_HINTS}\n"
+
+DECO=${MOTIF_HINTS%%, *}
+MOTIF_HINTS=${MOTIF_HINTS#*, }
+FIRST=true
+echo $DECO
+HUMAN_HINTS="${HUMAN_HINTS}3: "
+append $DECO 1 "MWM_DECOR_ALL"
+append $DECO 2 "MWM_DECOR_BORDER"
+append $DECO 4 "MWM_DECOR_RESIZEH"
+append $DECO 8 "MWM_DECOR_TITLE"
+append $DECO 16 "MWM_DECOR_MENU"
+append $DECO 32 "MWM_DECOR_MINIMIZE"
+append $DECO 64 "MWM_DECOR_MAXIMIZE"
+HUMAN_HINTS="${HUMAN_HINTS}\n"
+
+INPT=${MOTIF_HINTS%%, *}
+MOTIF_HINTS=${MOTIF_HINTS#*, }
+echo $INPT
+HUMAN_HINTS="${HUMAN_HINTS}4: "
+FIRST=true
+if ((INPT == 0)); then HUMAN_HINTS="${HUMAN_HINTS}MWM_INPUT_MODELESS"; elif\
+   ((INPT == 1)); then HUMAN_HINTS="${HUMAN_HINTS}MWM_INPUT_PRIMARY_APPLICATION_MODAL"; elif\
+   ((INPT == 2)); then HUMAN_HINTS="${HUMAN_HINTS}MWM_INPUT_SYSTEM_MODAL"; elif\
+   ((INPT == 3)); then HUMAN_HINTS="${HUMAN_HINTS}MWM_INPUT_FULL_APPLICATION_MODAL"; fi
+
+echo -e "$HUMAN_HINTS\n"
