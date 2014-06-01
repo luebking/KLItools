@@ -161,19 +161,26 @@ BASE_NAME="`basename $REAL_PATH`"
 DROP_PATH=${REAL_PATH%/${BASE_NAME}}
 export PATH="$(echo $PATH | sed -e "s%${DROP_PATH}/*:*%%g")"
 
+GLES=`kreadconfig --file kwinrc --group Compositing --key GLES 2>/dev/null`
+if [ "${GLES}" = "true" ]; then
+    BINARY=kwin_gles
+else
+    BINARY=kwin_gles
+fi
+
 # Read the FXAA mode
 # A special antialiasing which is not controlled by __GL_FSAA_MODE  and causes strong blurring
 FXAA=`nvidia-settings -tq FXAA 2>/dev/null`
 if [ "${FXAA}" = "1" ]; then
     # Turn it off
     nvidia-settings -a FXAA=0 > /dev/null 2>&1
-    kwin --replace "$@" &
+    $BINARY --replace "$@" &
     # wait ten seconds, FXAA is interpreted when creating the context
     sleep 10
     # reset FXAA
     nvidia-settings -a FXAA=${FXAA} > /dev/null 2>&1
 else
-    kwin --replace "$@" &
+    $BINARY --replace "$@" &
 fi
 
 
