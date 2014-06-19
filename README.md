@@ -21,6 +21,11 @@ kwin
 kwin launcher shellscript. allows to set various environment variables for kwin and implies "--replace &"
 place it somewhere up in $PATH, eg. /usr/local/bin or ~/bin
 
+kwindowsystem
+-------------
+similar to wmctrl, but with extended virtual desktop manipulation functionality, window picking and
+under my control =)
+
 mwminfo
 -------
 shellscript that interprets the_MOTIF_WM_HINTS property of a window. requires "xprop"
