@@ -290,10 +290,11 @@ int main(int argc, char **argv)
             const int desk = (argc > 3) ? virtualDesktop(QString::fromLocal8Bit(argv[3])) : 0;
             // extend number of desktops
             int n = KWindowSystem::numberOfDesktops() + 1;
+            const int currentDesktop = KWindowSystem::currentDesktop();
             NETRootInfo(QX11Info::display(), NET::NumberOfDesktops).setNumberOfDesktops(n);
             // shift all windows on desktops above the "inserted"
             if (desk < n) { // KWS counts desktops like humans, starting by 1
-                foreach (const WId &wid, KWindowSystem::windows()) {
+                foreach (const WId &wid, KWindowSystem::stackingOrder()) {
                     int d = KWindowInfo(wid, NET::WMDesktop).desktop();
                     if (d >= desk)
                         KWindowSystem::setOnDesktop(wid, d+1);
@@ -304,9 +305,8 @@ int main(int argc, char **argv)
             for (int i = n; i > desk; --i)
                 KWindowSystem::setDesktopName(i, KWindowSystem::desktopName(i-1));
             KWindowSystem::setDesktopName(desk, argc > 4 ? QString::fromLocal8Bit(argv[4]) : QString("Desktop %1").arg(desk));
-            const int cd = KWindowSystem::currentDesktop();
-            if (desk <= cd)
-                KWindowSystem::setCurrentDesktop(cd + 1);
+            if (desk <= currentDesktop)
+                KWindowSystem::setCurrentDesktop(currentDesktop + 1);
             FINISH;
         }
 
@@ -346,7 +346,7 @@ int main(int argc, char **argv)
 
             // shift all windows on desktops above the "removed"
             if (desk < n) {
-                foreach (const WId &wid, KWindowSystem::windows()) {
+                foreach (const WId &wid, KWindowSystem::stackingOrder()) {
                     int d = KWindowInfo(wid, NET::WMDesktop).desktop();
                     if (d >= desk)
                         KWindowSystem::setOnDesktop(wid, d-1);
