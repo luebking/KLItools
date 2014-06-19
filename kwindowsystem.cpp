@@ -304,6 +304,9 @@ int main(int argc, char **argv)
             for (int i = n; i > desk; --i)
                 KWindowSystem::setDesktopName(i, KWindowSystem::desktopName(i-1));
             KWindowSystem::setDesktopName(desk, argc > 4 ? QString::fromLocal8Bit(argv[4]) : QString("Desktop %1").arg(desk));
+            const int cd = KWindowSystem::currentDesktop();
+            if (desk <= cd)
+                KWindowSystem::setCurrentDesktop(cd + 1);
             FINISH;
         }
 
@@ -355,6 +358,9 @@ int main(int argc, char **argv)
 
             // finally, reduce number of desktops
             NETRootInfo(QX11Info::display(), NET::NumberOfDesktops).setNumberOfDesktops(n-1);
+            const int cd = KWindowSystem::currentDesktop();
+            if (desk < cd)
+                KWindowSystem::setCurrentDesktop(cd - 1);
             FINISH;
         }
 
