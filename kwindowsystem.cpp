@@ -292,7 +292,7 @@ int main(int argc, char **argv)
             int n = KWindowSystem::numberOfDesktops() + 1;
             NETRootInfo(QX11Info::display(), NET::NumberOfDesktops).setNumberOfDesktops(n);
             // shift all windows on desktops above the "inserted"
-            if (desk > 0 && desk < n) { // KWS counts desktops like humans, starting by 1
+            if (desk < n) { // KWS counts desktops like humans, starting by 1
                 foreach (const WId &wid, KWindowSystem::windows()) {
                     int d = KWindowInfo(wid, NET::WMDesktop).desktop();
                     if (d >= desk)
