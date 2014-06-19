@@ -87,8 +87,8 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "  sets or unsets certain states of a window. <states> is a comma separated list.\n    valid states are:\n    ------------\n"
         "    sticky,maximized,maximized_vertically,maximized_horizontally,shaded,skiptaskbar,skippager,hidden,fullscreen,keepabove,keepbelow";
     static const char *deskHelp = "Virtual desktop management\n          ---------\n"
-        "* desktop current\n  print the number of the currently active virtual desktop\n"
-        "* desktop set <desktop id>\n  move to a virtual desktop\n\n"
+        "* desktop active\n  print the number of the currently active virtual desktop\n"
+        "* desktop activate <desktop id>\n  move to a virtual desktop\n\n"
 
         "* desktop count\n  print the amount of virtual desktops\n"
         "* desktop setCount <number>\n  set amount of virtual desktops\n\n"
@@ -108,8 +108,8 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "NOTICE that if it is a name, ONLY THE FIRST matching (exact and case sensitive!) virtual desktop is affected";
     if (topic.isEmpty() || topic == "unknowncommand") {
         std::cout << "\nUsage:\n-------------------------------\n"
-        "* isCompositing\n  print true or false, depending on whether a compositor is active\n"
-        "* activeWindow\n  print the currently active <window id>\n"
+        "* isComposited\n  print true or false, depending on whether a compositor is active\n"
+        "* active\n  print the currently active <window id>\n"
         "* id [active]\n  print the id of the active or to be picked window\n\n"
         "* activate <windowid>\n"
         "* lower <windowid>\n"
@@ -186,8 +186,8 @@ int main(int argc, char **argv)
     QApplication a(argc, argv); // required to talk to the X11 server
 
     QString command = QString::fromLocal8Bit(argv[1]);
-    INFO("activeWindow", activeWindow)
-    INFO("isCompositing", compositingActive)
+    INFO("active", activeWindow)
+    INFO("isComposited", compositingActive)
 
     WIN_FUNC("activate", forceActiveWindow)
     WIN_FUNC("lower", lowerWindow)
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
             printHelp("desktop");
 
         command = QString::fromLocal8Bit(argv[2]);
-        INFO("current", currentDesktop)
+        INFO("active", currentDesktop)
         INFO("count", numberOfDesktops)
         INFO("showing", showingDesktop)
 
@@ -318,7 +318,7 @@ int main(int argc, char **argv)
             FINISH;
         }
 
-        if (command == "set") {
+        if (command == "activate") {
             const int desk = virtualDesktop(QString::fromLocal8Bit(argv[3]));
             if (desk < 1 || desk > KWindowSystem::numberOfDesktops())
                 printHelp("falsedesk", argv[3]);
