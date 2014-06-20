@@ -100,6 +100,9 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "* desktop name <number>\n  print the name of a virtual desktop\n"
         "* desktop rename <desktop id> <new name>\n\n"
 
+        "* desktop move <desktop id> <desktop id>\n  move desktop to another position\n"
+        "* desktop swap <desktop id> <desktop id>\n  swap number of position desktops\n\n"
+
         "* desktop add [<desktop id> [<new name>]]\n  add a virtual desktop at the optional position of <desktop id> with the optional name <new name>\n"
         "   (windows and names of present desktops are preserved)\n"
         "* desktop remove <desktop id>\n  remove a virtual desktop (windows and names of other remaining desktops are preserved)\n"
@@ -294,7 +297,8 @@ int main(int argc, char **argv)
             NETRootInfo(QX11Info::display(), NET::NumberOfDesktops).setNumberOfDesktops(n);
             // shift all windows on desktops above the "inserted"
             if (desk < n) { // KWS counts desktops like humans, starting by 1
-                foreach (const WId &wid, KWindowSystem::stackingOrder()) {
+                const QList<WId> stack = KWindowSystem::stackingOrder();
+                foreach (const WId &wid, stack) {
                     int d = KWindowInfo(wid, NET::WMDesktop).desktop();
                     if (d >= desk)
                         KWindowSystem::setOnDesktop(wid, d+1);
@@ -346,7 +350,8 @@ int main(int argc, char **argv)
 
             // shift all windows on desktops above the "removed"
             if (desk < n) {
-                foreach (const WId &wid, KWindowSystem::stackingOrder()) {
+                const QList<WId> stack = KWindowSystem::stackingOrder();
+                foreach (const WId &wid, stack) {
                     int d = KWindowInfo(wid, NET::WMDesktop).desktop();
                     if (d >= desk)
                         KWindowSystem::setOnDesktop(wid, d-1);
@@ -366,6 +371,78 @@ int main(int argc, char **argv)
 
         if (argc < 5)
             printHelp("desktop");
+
+        if (command == "move") {
+            const int d1 = virtualDesktop(QString::fromLocal8Bit(argv[3]));
+            if (d1 < 1 || d1 > KWindowSystem::numberOfDesktops())
+                printHelp("falsedesk", argv[3]);
+            const int n = KWindowSystem::numberOfDesktops();
+            const int d2 = qMin(qMax(1, virtualDesktop(QString::fromLocal8Bit(argv[4]))), n);
+            if (d1 == d2)
+                exit(1); // same desk
+
+            QList<WId> stack = KWindowSystem::stackingOrder();
+            foreach (const WId &wid, stack) {
+                const int d = KWindowInfo(wid, NET::WMDesktop).desktop();
+                if (d == d1)
+                    KWindowSystem::setOnDesktop(wid, d2);
+                else if (d < d1 && d >= d2)
+                    KWindowSystem::setOnDesktop(wid, d+1);
+                else if (d > d1 && d <= d2)
+                    KWindowSystem::setOnDesktop(wid, d-1);
+            }
+
+            const int cd = KWindowSystem::currentDesktop();
+            if (cd == d1)
+                KWindowSystem::setCurrentDesktop(d2);
+            const QString buffer = KWindowSystem::desktopName(d1);
+            if (d1 < d2) {
+                for (int i = d1; i < d2; ++i) {
+                    KWindowSystem::setDesktopName(i, KWindowSystem::desktopName(i+1));
+                    if (i+1 == cd)
+                        KWindowSystem::setCurrentDesktop(i);
+                }
+            } else {
+                for (int i = d1; i > d2; --i) {
+                    KWindowSystem::setDesktopName(i, KWindowSystem::desktopName(i-1));
+                    if (i-1 == cd)
+                        KWindowSystem::setCurrentDesktop(i);
+                }
+            }
+            KWindowSystem::setDesktopName(d2, buffer);
+            FINISH;
+        }
+
+        if (command == "swap") {
+            const int d1 = virtualDesktop(QString::fromLocal8Bit(argv[3]));
+            if (d1 < 1 || d1 > KWindowSystem::numberOfDesktops())
+                printHelp("falsedesk", argv[3]);
+            const int d2 = virtualDesktop(QString::fromLocal8Bit(argv[4]));
+            if (d2 < 1 || d2 > KWindowSystem::numberOfDesktops())
+                printHelp("falsedesk", argv[4]);
+            if (d1 == d2)
+                exit(1); // same desk
+
+            const int cd = KWindowSystem::currentDesktop();
+            if (cd == d1)
+                KWindowSystem::setCurrentDesktop(d2);
+            else if (cd == d2)
+                KWindowSystem::setCurrentDesktop(d1);
+
+            QList<WId> stack = KWindowSystem::stackingOrder();
+            foreach (const WId &wid, stack) {
+                const int d = KWindowInfo(wid, NET::WMDesktop).desktop();
+                if (d == d1)
+                    KWindowSystem::setOnDesktop(wid, d2);
+                else if (d == d2)
+                    KWindowSystem::setOnDesktop(wid, d1);
+            }
+
+            const QString buffer = KWindowSystem::desktopName(d1);
+            KWindowSystem::setDesktopName(d1, KWindowSystem::desktopName(d2));
+            KWindowSystem::setDesktopName(d2, buffer);
+            FINISH;
+        }
 
         if (command == "rename") {
             const int desk = virtualDesktop(QString::fromLocal8Bit(argv[3]));
