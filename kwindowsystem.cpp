@@ -87,6 +87,7 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "  sets or unsets certain states of a window. <states> is a comma separated list.\n    valid states are:\n    ------------\n"
         "    sticky,maximized,maximized_vertically,maximized_horizontally,shaded,skiptaskbar,skippager,hidden,fullscreen,keepabove,keepbelow";
     static const char *deskHelp = "Virtual desktop management\n          ---------\n"
+        "* desktop list\n  print list of virtual desktops \"n: <name>\"\n\n"
         "* desktop active\n  print the number of the currently active virtual desktop\n"
         "* desktop activate <desktop id>\n  move to a virtual desktop\n\n"
 
@@ -282,6 +283,12 @@ int main(int argc, char **argv)
         INFO("active", currentDesktop)
         INFO("count", numberOfDesktops)
         INFO("showing", showingDesktop)
+
+        if (command == "list") {
+            for (int i = 1; i <= KWindowSystem::numberOfDesktops(); ++i)
+                std::cout << CHAR(toString(i)) << ": " << CHAR(KWindowSystem::desktopName(i)) << std::endl;
+            FINISH;
+        }
 
         if ((set = (command == "show")) || (command == "hide")) {
             const unsigned long properties[2] = {0, NET::WM2ShowingDesktop};
