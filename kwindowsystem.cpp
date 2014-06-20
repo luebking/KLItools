@@ -181,6 +181,18 @@ WId window(QString string)
     return 0; // for gcc - printHelp will exit(1)
 }
 
+static const char *wmTypes[16] = {
+    "Normal", "Desktop", "Dock", "Toolbar", "Menu", "Dialog", "Override", "TopMenu",
+    "Utility", "Splash", "DropdownMenu", "PopupMenu", "Tooltip", "Notification", "ComboBox", "DNDIcon"
+};
+
+const char *wmType(int i)
+{
+    if (i < 0 || i > 15)
+        return "Unknown";
+    return wmTypes[i];
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -192,6 +204,17 @@ int main(int argc, char **argv)
     QString command = QString::fromLocal8Bit(argv[1]);
     INFO("active", activeWindow)
     INFO("isComposited", compositingActive)
+
+    if (command == "list") {
+        const QList<WId> stack = KWindowSystem::stackingOrder();
+        foreach (const WId &wid, stack) {
+            KWindowInfo info(wid, NET::WMWindowType|NET::WMVisibleName|NET::WMDesktop|NET::WMGeometry|NET::WMState|NET::XAWMState, NET::WM2WindowClass);
+            std::cout << CHAR(toString(wid)) << " | " << CHAR(info.visibleNameWithState()) << " | " <<
+                         info.windowClassClass().data() << " | " << info.windowClassName().data() << " | " <<
+                         wmType(info.windowType(NET::AllTypesMask)) << " | " << CHAR(toString(info.desktop())) << std::endl;
+        }
+        FINISH;
+    }
 
     WIN_FUNC("activate", forceActiveWindow)
     WIN_FUNC("lower", lowerWindow)
