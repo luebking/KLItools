@@ -147,6 +147,16 @@ void printHelp(QString topic = QString(), QString parameter = QString())
 inline QString toString(WId w) { return QString::number(w); }
 inline QString toString(int i) { return QString::number(i); }
 inline QString toString(bool b) { return b ? "true" : "false"; }
+inline QString toString(const QRect &r) {
+    QString ret = QString::number(r.width()) + "x" + QString::number(r.width());
+    if (r.x() > -1)
+        ret += '+';
+    ret += QString::number(r.x());
+    if (r.y() > -1)
+        ret += '+';
+    ret += QString::number(r.y());
+    return ret;
+}
 
 int virtualDesktop(QString deskId)
 {
@@ -211,7 +221,7 @@ int main(int argc, char **argv)
             KWindowInfo info(wid, NET::WMWindowType|NET::WMVisibleName|NET::WMDesktop|NET::WMGeometry|NET::WMState|NET::XAWMState, NET::WM2WindowClass);
             std::cout << CHAR(toString(wid)) << " | " << CHAR(info.visibleNameWithState()) << " | " <<
                          info.windowClassClass().data() << " | " << info.windowClassName().data() << " | " <<
-                         wmType(info.windowType(NET::AllTypesMask)) << " | " << CHAR(toString(info.desktop())) << std::endl;
+                         wmType(info.windowType(NET::AllTypesMask)) << " | " << CHAR(toString(info.desktop())) << " | "  << CHAR(toString(info.geometry())) << std::endl;
         }
         FINISH;
     }
