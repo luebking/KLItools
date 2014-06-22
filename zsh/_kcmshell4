@@ -14,6 +14,8 @@ if (( CURRENT == 2 )); then
         kcmshell4 --list | sed "1d; s/ * - /:/g" > "$cache"
     fi
     while read line; do
+        line="${line#kcm_}"
+        line="${line#kcm}"
         completion+="$line"
     done < "$cache"
     _describe -t completion 'completion' completion
