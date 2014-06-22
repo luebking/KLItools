@@ -1,0 +1,20 @@
+#compdef kcmshell4
+
+if (( CURRENT == 2 )); then
+    completion=()
+    cache="`kde4-config --path tmp`.zshcomp.kcmshell4" # kcmshell4 --list is incredibly slow
+    completion=()
+    createCache=false
+    if [ ! -e "$cache" ]; then
+        createCache=true
+    elif [ -z "${words[2]}" ] && ((`date +%s` - `date -r "$cache" +%s` > 60)); then
+        createCache=true
+    fi
+    if $createCache; then
+        kcmshell4 --list | sed "1d; s/ * - /:/g" > "$cache"
+    fi
+    while read line; do
+        completion+="$line"
+    done < "$cache"
+    _describe -t completion 'completion' completion
+fi

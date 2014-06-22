@@ -36,3 +36,9 @@ playOrStop
 simple shellsctipt that plays a file with mplayer. on second invocation it stops playback (and
 starts playback of new file if invoked on a different file) - usable as audio"preview" for eg.
 dolphin or other FMs
+
+zsh
+---
+zsh completions - they're probably crap, but i didn't find anything else on the interwebs in all the years
+* qdbus
+* kcmshell4

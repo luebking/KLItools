@@ -1,0 +1,46 @@
+#compdef qdbus qdbus-qt4 qdbus-qt5
+read -A command <<< "${words% *}"
+completion=()
+case $CURRENT in
+    2)
+    while read line; do
+        completion+="$line"
+    done < <(${command[@]} | sed '/:[0-9]*\.[0-9]*/d')
+    ;;
+    3)
+    while read line; do
+        completion+="$line"
+    done < <(${command[@]})
+    ;;
+    4)
+    meth_prop=`${command[@]} | sed '/signal /d'`
+    while read line; do
+        completion+="$line"
+    done < <(echo $meth_prop | sed 's/([^(]*)$//g; s/.* \([^ ]*\)/\1/g')
+    while read line; do
+        completion+="${line##*.}"
+    done < <(echo $meth_prop | sed '/property /d; s/([^(]*)$//g; s/.* \([^ ]*\)/\1/g')
+    ;;
+    5)
+    property=`${command[@]:0:3} | grep ${words[4]} | grep -E '^property'`
+    if [ -z $property ]; then # function polymorphism
+        while read line; do
+            completion+="${line}"
+        done < <(${command[@]:0:3} | sed '/'${words[4]}'/!d; s/.*(\(.*\))/\1/g; s/, /,/g; s/ /:/g')
+    else # property
+        property="${property#property }"
+        property="${property% *}"
+        property="${property//, /,}"
+        property="${property// /:}"
+        property="${property//\(/}"
+        property="${property//\)/}"
+        completion+="${property}"
+    fi
+    ;;
+    *)
+#     _files
+    return
+    ;;
+esac
+
+compadd "$@" ${completion[@]}
