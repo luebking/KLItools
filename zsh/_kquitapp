@@ -1,0 +1,9 @@
+#compdef kquitapp kquitapp5
+
+if (( CURRENT == 2 )); then
+    completion=()
+    for service in `qdbus | grep -E '^ *org.kde.'`; do
+        completion+=${service#*org.kde.}
+    done
+    compadd "$@" ${completion[@]}
+fi
