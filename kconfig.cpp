@@ -50,12 +50,14 @@ void usage() {
                 "  lists all keys in the (sub)group matching the regular expression <key> (if provided)\n"
                 "* listkeys [<key>]\n"
                 "  like list, but does not show values (for autocompletion)\n"
+                "* listgroups [<key>]\n"
+                "  like list, but only shows (sub)groups (for autocompletion)\n"
                 "* replace <key> <value>\n"
                 "  replaces regular expression <key> with <value>, eg. \n"
                 "           kconfig MyApp/Group replace Item(.*)=Old(.*) Item\\1=New\\2\n";
 }
 
-enum Mode { Invalid = 0, Read, Write, List, ListKeys, Replace, Delete, DeleteGroup };
+enum Mode { Invalid = 0, Read, Write, List, ListKeys, ListGroups, Replace, Delete, DeleteGroup };
 
 QString path(KConfigGroup group)
 {
@@ -134,6 +136,8 @@ void process(Mode mode, KConfigGroup &grp, QString key, QString value)
     case List:
     case ListKeys: {
         if (!grp.exists()) { // could be parent group
+            if (mode == ListKeys)
+                exit(1);
             QStringList groups = grp.parent().exists() ? grp.parent().groupList() : grp.config()->groupList();
             if (groups.isEmpty()) {
                 std::cout << "The component/group " << CHAR(path(grp)) << " does not exist" << std::endl;
@@ -174,6 +178,13 @@ void process(Mode mode, KConfigGroup &grp, QString key, QString value)
             }
         }
         break;
+    }
+    case ListGroups: {
+        QStringList groups = grp.parent().exists() ? grp.parent().groupList() : grp.config()->groupList();
+        foreach (const QString &s, groups)
+            if (key.isEmpty() || s.contains(key, Qt::CaseInsensitive))
+                std::cout << CHAR(s) << std::endl;
+        exit(0);
     }
     case Replace: {
         if (grp.isImmutable()) {
@@ -377,6 +388,8 @@ Mode checkMode(QString modekey, int argc) {
         mode = List;
     } else if (modekey == "listkeys") {
         mode = ListKeys;
+    } else if (modekey == "listgroups") {
+        mode = ListGroups;
     } else if (modekey == "replace") {
         if (argc < 5) {
             std::cout << "You must say <what regexp> to replace by <what string>" << std::endl;
