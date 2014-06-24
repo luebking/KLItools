@@ -355,35 +355,29 @@ Mode checkMode(QString modekey, int argc) {
             exit(1);
         }
         mode = Read;
-    }
-    if (modekey == "write" || modekey == "set") {
+    } else if (modekey == "write" || modekey == "set") {
         if (argc < 5) {
             std::cout << "You must say what <key> to write to what <value>" << std::endl;
             exit(1);
         }
         mode = Write;
-    }
-    if (modekey == "delete") {
+    } else if (modekey == "delete") {
         if (argc < 4) {
             std::cout << "You must say what key to delete" << std::endl;
             exit(1);
         }
         mode = Delete;
-    }
-    if (modekey == "deletegroup") {
+    } else if (modekey == "deletegroup") {
         if (argc < 4) {
             std::cout << "You must say what group to delete" << std::endl;
             exit(1);
         }
         mode = DeleteGroup;
-    }
-    if (modekey == "list") {
+    } else if (modekey == "list") {
         mode = List;
-    }
-    if (modekey == "listkeys") {
+    } else if (modekey == "listkeys") {
         mode = ListKeys;
-    }
-    if (modekey == "replace") {
+    } else if (modekey == "replace") {
         if (argc < 5) {
             std::cout << "You must say <what regexp> to replace by <what string>" << std::endl;
             exit(1);
