@@ -1,0 +1,50 @@
+#compdef kconfig
+m_configString="${words[2]}"
+m_config=("${(s%/%)m_configString}")
+completion=()
+case $CURRENT in
+    2)
+    if (( ${#m_config[@]} == 1 )); then
+        completion+="barfoo"
+        m_configPaths="`kde4-config --path config`"
+        m_configPaths=("${(s/:/)m_configPaths}")
+        completion+=(`ls -1 "${m_configPaths[@]}"`)
+    else
+        m_validpath=${m_configString%/*}
+        while read line; do
+            completion+="$m_validpath/$line"
+        done < <(kconfig $m_validpath listgroups)
+    fi
+    ;;
+    3)
+    completion=(get set delete deletegroup list listkeys listgroups replace)
+    ;;
+    4)
+    case ${words[3]} in
+        "read"|"get"|"write"|"set"|"delete"|"replace")
+        completion=(`kconfig "${words[2]}" listkeys`)
+        ;;
+        "deletegroup")
+        completion=(`kconfig "${words[2]}" listgroups`)
+        ;;
+        *)
+        return
+        ;;
+    esac
+    ;;
+    5)
+    case ${words[3]} in
+        "write"|"set")
+        completion=(`kconfig "${words[2]}" get "${words[4]}"`)
+        ;;
+        *)
+        return
+        ;;
+    esac
+    ;;
+    *)
+    return
+    ;;
+esac
+
+compadd "$@" ${completion[@]}
