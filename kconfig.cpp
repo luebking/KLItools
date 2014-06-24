@@ -48,12 +48,14 @@ void usage() {
                 "  removes the group <key> from the (sub)group and informs whether there was such\n"
                 "* list [<key>]\n"
                 "  lists all keys in the (sub)group matching the regular expression <key> (if provided)\n"
+                "* listkeys [<key>]\n"
+                "  like list, but does not show values (for autocompletion)\n"
                 "* replace <key> <value>\n"
                 "  replaces regular expression <key> with <value>, eg. \n"
                 "           kconfig MyApp/Group replace Item(.*)=Old(.*) Item\\1=New\\2\n";
 }
 
-enum Mode { Invalid = 0, Read, Write, List, Replace, Delete, DeleteGroup };
+enum Mode { Invalid = 0, Read, Write, List, ListKeys, Replace, Delete, DeleteGroup };
 
 QString path(KConfigGroup group)
 {
@@ -129,7 +131,8 @@ void process(Mode mode, KConfigGroup &grp, QString key, QString value)
         }
         break;
     }
-    case List: {
+    case List:
+    case ListKeys: {
         if (!grp.exists()) { // could be parent group
             QStringList groups = grp.parent().exists() ? grp.parent().groupList() : grp.config()->groupList();
             if (groups.isEmpty()) {
@@ -149,19 +152,27 @@ void process(Mode mode, KConfigGroup &grp, QString key, QString value)
             break;
         }
 
-        bool matchFound = false;
-        for (QMap<QString, QString>::const_iterator it = map.constBegin(), end = map.constEnd(); it != end; ++it) {
-            if (key.isEmpty() || it.key().contains(key, Qt::CaseInsensitive)) {
-                if (!matchFound)
-                    std::cout << std::endl << CHAR(path(grp)) << gs_separator << std::endl;
-                matchFound = true;
-                std::cout << CHAR(it.key()) << ": " << CHAR(it.value()) << std::endl;
+        if (mode == List) {
+            bool matchFound = false;
+            for (QMap<QString, QString>::const_iterator it = map.constBegin(), end = map.constEnd(); it != end; ++it) {
+                if (key.isEmpty() || it.key().contains(key, Qt::CaseInsensitive)) {
+                    if (!matchFound)
+                        std::cout << std::endl << CHAR(path(grp)) << gs_separator << std::endl;
+                    matchFound = true;
+                    std::cout << CHAR(it.key()) << ": " << CHAR(it.value()) << std::endl;
+                }
+            }
+
+            if (!matchFound)
+                std::cout << "No present key matches \"" << CHAR(key) << "\" in " << CHAR(path(grp));
+            std::cout << std::endl;
+        } else {
+            for (QMap<QString, QString>::const_iterator it = map.constBegin(), end = map.constEnd(); it != end; ++it) {
+                if (key.isEmpty() || it.key().contains(key, Qt::CaseInsensitive)) {
+                    std::cout << CHAR(it.key()) << std::endl;
+                }
             }
         }
-
-        if (!matchFound)
-            std::cout << "No present key matches \"" << CHAR(key) << "\" in " << CHAR(path(grp));
-        std::cout << std::endl;
         break;
     }
     case Replace: {
@@ -368,6 +379,9 @@ Mode checkMode(QString modekey, int argc) {
     }
     if (modekey == "list") {
         mode = List;
+    }
+    if (modekey == "listkeys") {
+        mode = ListKeys;
     }
     if (modekey == "replace") {
         if (argc < 5) {
