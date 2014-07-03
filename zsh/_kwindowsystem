@@ -1,0 +1,95 @@
+#compdef kwindowsystem
+
+completion=()
+
+case $CURRENT in
+    2)
+    completion=(isComposited:'print true or false, depending on whether a compositor is active' \
+                active:'print the currently active <window id>' \
+                id:'[active] print the id of the active or to be picked window' \
+                activate:'<windowid>' lower:'<windowid>' raise:'<windowid>' minimize:'<windowid>' \
+                unminimize:'<windowid>' close:'<windowid>' set:'set window urgency, desktop or states' \
+                unset:'unset window urgency or states' desktop:'manage virtual desktops')
+    ;;
+    3)
+    case ${words[2]} in
+        "id")
+        completion=(active)
+        ;;
+        "activate"|"lower"|"raise"|"minimize"|"unminimize"|"close"|"set"|"unset")
+        while read line; do
+            completion+="${line/ | /:\'}"\'
+        done < <(kwindowsystem list)
+        ;;
+        "desktop")
+        completion=(list:'print list of virtual desktops "n: <name>"' \
+                    active:'print the number of the currently active virtual desktop' \
+                    activate:'<desktop id> - move to a virtual desktop' \
+                    count:'print the amount of virtual desktops' \
+                    setCount:'<number> - set amount of virtual desktops' \
+                    showing:'print true or false, depending on whether the desktop is currently shown' \
+                    show hide name:'<number> - print the name of a virtual desktop' \
+                    rename:'<desktop id> <new name>' \
+                    move:'<desktop id> <desktop id> - move desktop to another position' \
+                    swap:'<desktop id> <desktop id> - swap number of position desktops' \
+                    add:'[<desktop id> [<new name>]] - add a virtual desktop at the optional position of <desktop id> with the optional name <new name>\n(windows and names of present desktops are preserved)' \
+                    remove:'<desktop id> - remove a virtual desktop (windows and names of other remaining desktops are preserved')
+        ;;
+        *)
+        return
+        ;;
+        esac
+    ;;
+    4)
+    case ${words[2]} in
+        "set"|"unset")
+        completion=(desktop urgent sticky maximized maximized_vertically maximized_horizontally shaded skiptaskbar skippager hidden fullscreen keepabove keepbelow)
+        ;;
+        "desktop")
+        case ${words[3]} in
+            "activate"|"rename"|"move"|"swap"|"add"|"remove"|"name")
+            if [ "${words[3]}" = "add" ]; then
+                completion+='NewName'
+            fi
+            while read line; do
+                completion+="${line/: /:\'}"\'
+            done < <(kwindowsystem desktop list)
+            ;;
+            "setCount")
+            completion=(`kwindowsystem desktop count`)
+            ;;
+            *)
+            return
+            ;;
+        esac
+        ;;
+        *)
+        return
+        ;;
+    esac
+    ;;
+    5)
+    if [ "${words[2]}" = "desktop" ]; then
+        case ${words[3]} in
+            "rename"|"add")
+            completion=('NewName')
+            ;;
+            "move"|"swap")
+            while read line; do
+                completion+="${line/: /:\'}"\'
+            done < <(kwindowsystem desktop list)
+            ;;
+            *)
+            return
+            ;;
+        esac
+    else
+        return
+    fi
+    ;;
+    *)
+    return
+    ;;
+esac
+
+_describe -t completion 'completion' completion
