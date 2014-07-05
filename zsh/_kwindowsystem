@@ -43,7 +43,7 @@ case $CURRENT in
     4)
     case ${words[2]} in
         "set"|"unset")
-        completion=(desktop urgent sticky maximized maximized_vertically maximized_horizontally shaded skiptaskbar skippager hidden fullscreen keepabove keepbelow)
+        completion=(desktop urgent geometry sticky maximized maximized_vertically maximized_horizontally shaded skiptaskbar skippager hidden fullscreen keepabove keepbelow)
         ;;
         "desktop")
         case ${words[3]} in
@@ -83,6 +83,8 @@ case $CURRENT in
             return
             ;;
         esac
+    elif [ "${words[2]}" = "set" -a  "${words[2]}" = "set" ]; then
+        completion=("WxH+X+Y")
     else
         return
     fi

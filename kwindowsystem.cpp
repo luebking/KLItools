@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 
 #include <QApplication>
+#include <QDesktopWidget>
 #include <QDialog>
 
 #include <QMetaObject>
@@ -29,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <KWindowSystem>
 #include <NETRootInfo>
+
 
 class WindowPicker : public QDialog
 {
@@ -137,6 +139,8 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         std::cout << setHelp << std::endl;
     } else if (topic == "setdesktop") {
         std::cout << "\"set <window id> desktop <DESKTOP ID>\" expects the number or name of a desktop as last parameter" << std::endl;
+    } else if (topic == "setgeometry") {
+        std::cout << "\"set <window id> geometry <GEOMETRY>\" expects an X11 conformant geometry string [=][<width>{xX}<height>][{+-}<xoffset>{+-}<yoffset>]" << std::endl;
     } else {
         std::cout << "error: " << CHAR(topic) << std::endl;
     }
@@ -265,6 +269,39 @@ int main(int argc, char **argv)
             if (desk < 1 || desk > KWindowSystem::numberOfDesktops())
                 printHelp("falsedesk", command);
             KWindowSystem::setOnDesktop(wid, desk);
+            FINISH;
+        }
+
+        if (set && command == "geometry") {
+            if (argc < 5)
+                printHelp("setgeometry");
+            int x,y;
+            unsigned int w,h;
+            int parsed = XParseGeometry(argv[4], &x, &y, &w, &h);
+            if (!parsed)
+                printHelp("setgeometry");
+
+            const QRect geometry = KWindowInfo(wid, NET::WMGeometry).geometry();
+            const QRect area = a.desktop()->availableGeometry(geometry.center());
+            enum Gravity { Original = 0, NorthWest, North, NorthEast, West, Center, East, SouthWest, South, SouthEast, Static };
+            int flags = 1 << 13; // "from tool"
+            int gravity = Center;
+            (parsed & WidthValue) ? flags |= 1<<10 : w = geometry.width();
+            (parsed & HeightValue) ? flags |= 1<<11 : h = geometry.height();
+            if (parsed & XValue) {
+                gravity = West;
+                flags |= 1<<8;
+                if (parsed & XNegative)
+                    x = area.right() - (w + x);
+            }
+            if (parsed & YValue) {
+                gravity == West ? NorthWest : North;
+                flags |= 1<<9;
+                if (parsed & YNegative)
+                    y = area.bottom() - (h + y);
+            }
+            flags |= gravity;
+            NETRootInfo(QX11Info::display(), 0).moveResizeWindowRequest(wid, flags, x, y, w, h);
             FINISH;
         }
 
