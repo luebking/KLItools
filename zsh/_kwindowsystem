@@ -6,6 +6,7 @@ case $CURRENT in
     2)
     completion=(isComposited:'print true or false, depending on whether a compositor is active' \
                 active:'print the currently active <window id>' \
+                list:'print list of managed windows "<wid> | <title> | <classclass> | <classname> | <type> | <desktop> | <geometry>"'
                 id:'[active] print the id of the active or to be picked window' \
                 activate:'<windowid>' lower:'<windowid>' raise:'<windowid>' minimize:'<windowid>' \
                 unminimize:'<windowid>' close:'<windowid>' set:'set window urgency, desktop or states' \
