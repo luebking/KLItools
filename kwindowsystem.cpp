@@ -87,7 +87,8 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "* set <window id> <states>\n"
         "* unset <window id> <states>\n"
         "* toggle <window id> <states>\n"
-        "  sets or unsets certain states of a window. <states> is a comma separated list.\n    valid states are:\n    ------------\n"
+        "  sets or unsets certain states of a window. <states> is a comma separated list.\n";
+    static const char *statesHelp = "    valid states are:\n    ------------\n"
         "    sticky,maximized,maximized_vertically,maximized_horizontally,shaded,skiptaskbar,skippager,hidden,fullscreen,keepabove,keepbelow";
     static const char *deskHelp = "Virtual desktop management\n          ---------\n"
         "* desktop list\n  print list of virtual desktops \"n: <name>\"\n\n"
@@ -124,7 +125,7 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "* minimize <windowid>\n"
         "* unminimize <windowid>\n"
         "* close <windowid>\n"
-        << setHelp <<
+        << setHelp << statesHelp <<
         "\n\n\n  " << deskHelp << std::endl;
     } else if (topic == "falsedesk") {
         std::cout << "No such desktop: " << CHAR(parameter) << std::endl;
@@ -137,7 +138,9 @@ void printHelp(QString topic = QString(), QString parameter = QString())
     } else if (topic == "deskcount") {
         std::cout << "\"desktop setCount <NUMBER>\" expects a number > 0 as parameter" << std::endl;
     } else if (topic == "set") {
-        std::cout << setHelp << std::endl;
+        std::cout << setHelp << statesHelp << std::endl;
+    } else if (topic == "states") {
+        std::cout << statesHelp << std::endl;
     } else if (topic == "setdesktop") {
         std::cout << "\"set <window id> desktop <DESKTOP ID>\" expects the number or name of a desktop as last parameter" << std::endl;
     } else if (topic == "setgeometry") {
@@ -341,6 +344,7 @@ int main(int argc, char **argv)
 
         unsigned long stateMask = 0;
         QStringList states = command.simplified().split(',');
+        bool error = false;
         foreach (const QString &state, states) {
             if (state.toLower() == "sticky")
                 stateMask |= NET::Sticky;
@@ -364,8 +368,10 @@ int main(int argc, char **argv)
                 stateMask |= NET::KeepAbove;
             else if (state.toLower() == "keepbelow")
                 stateMask |= NET::KeepBelow;
-            else
+            else {
+                error = true;
                 std::cout << "Unknown state: " << CHAR(state) << std::endl;
+            }
         }
 
         NETWinInfo info(QX11Info::display(), wid, QX11Info::appRootWindow(), NET::WMState);
@@ -379,6 +385,9 @@ int main(int argc, char **argv)
             state &= ~stateMask;
 
         info.setState(state, stateMask);
+
+        if (error)
+            printHelp("states");
 
         FINISH;
     }
