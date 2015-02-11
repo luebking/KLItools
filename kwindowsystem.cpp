@@ -86,6 +86,7 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "* unset <window id> urgent\n  stop window blinking in the taskbar\n"
         "* set <window id> <states>\n"
         "* unset <window id> <states>\n"
+        "* toggle <window id> <states>\n"
         "  sets or unsets certain states of a window. <states> is a comma separated list.\n    valid states are:\n    ------------\n"
         "    sticky,maximized,maximized_vertically,maximized_horizontally,shaded,skiptaskbar,skippager,hidden,fullscreen,keepabove,keepbelow";
     static const char *deskHelp = "Virtual desktop management\n          ---------\n"
@@ -277,8 +278,8 @@ int main(int argc, char **argv)
         FINISH;
     }
 
-    bool set = false;
-    if ((set = (command == "set")) || (command == "unset")) {
+    bool set = false, toggle = false;
+    if ((set = (command == "set")) || (toggle = (command == "toggle")) || (command == "unset")) {
         if (argc < 4)
             printHelp("set");
 
@@ -338,38 +339,47 @@ int main(int argc, char **argv)
             FINISH;
         }
 
-        unsigned long net_state = 0;
+        unsigned long stateMask = 0;
         QStringList states = command.simplified().split(',');
         foreach (const QString &state, states) {
             if (state.toLower() == "sticky")
-                net_state |= NET::Sticky;
+                stateMask |= NET::Sticky;
             else if (state.toLower() == "maximized")
-                net_state |= (NET::MaxVert|NET::MaxHoriz);
+                stateMask |= (NET::MaxVert|NET::MaxHoriz);
             else if (state.toLower() == "maximized_vertically")
-                net_state |= NET::MaxVert;
+                stateMask |= NET::MaxVert;
             else if (state.toLower() == "maximized_horizontally")
-                net_state |= NET::MaxHoriz;
+                stateMask |= NET::MaxHoriz;
             else if (state.toLower() == "shaded")
-                net_state |= NET::Shaded;
+                stateMask |= NET::Shaded;
             else if (state.toLower() == "skiptaskbar")
-                net_state |= NET::SkipTaskbar;
+                stateMask |= NET::SkipTaskbar;
             else if (state.toLower() == "skippager")
-                net_state |= NET::SkipPager;
+                stateMask |= NET::SkipPager;
             else if (state.toLower() == "hidden")
-                net_state |= NET::Hidden;
+                stateMask |= NET::Hidden;
             else if (state.toLower() == "fullscreen")
-                net_state |= NET::FullScreen;
+                stateMask |= NET::FullScreen;
             else if (state.toLower() == "keepabove")
-                net_state |= NET::KeepAbove;
+                stateMask |= NET::KeepAbove;
             else if (state.toLower() == "keepbelow")
-                net_state |= NET::KeepBelow;
+                stateMask |= NET::KeepBelow;
             else
                 std::cout << "Unknown state: " << CHAR(state) << std::endl;
         }
+
+        NETWinInfo info(QX11Info::display(), wid, QX11Info::appRootWindow(), NET::WMState);
+        unsigned long state = info.state();
+
         if (set)
-            KWindowSystem::setState(wid, net_state);
+            state |= stateMask;
+        else if (toggle)
+            state ^= stateMask;
         else
-            KWindowSystem::clearState(wid, net_state);
+            state &= ~stateMask;
+
+        info.setState(state, stateMask);
+
         FINISH;
     }
 
