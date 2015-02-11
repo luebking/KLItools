@@ -184,9 +184,37 @@ WId window(QString string)
     WId wid = string.toUInt(&ok);
     if (!ok) {
         if ((ok = (string == "active"))) {
-            wid = KWindowSystem::activeWindow();
+            return KWindowSystem::activeWindow();
         } else if ((ok = (string == "pick"))) {
             return WindowPicker().pick();
+        } else {
+            const QList<WId> stack = KWindowSystem::stackingOrder();
+            QList<WId> className, title, classPartial, classNamePartial, titlePartial;
+            foreach (const WId &wid, stack) {
+                KWindowInfo info(wid, NET::WMVisibleName, NET::WM2WindowClass);
+                if (!string.compare(info.windowClassClass(), Qt::CaseInsensitive))
+                    return wid; // matches class - very good
+                if (!string.compare(info.windowClassName(), Qt::CaseInsensitive))
+                    className << wid;
+                else if (!string.compare(info.visibleName(), Qt::CaseInsensitive))
+                    title << wid;
+                else if (info.windowClassClass().contains(string.toLocal8Bit()))
+                    classPartial << wid;
+                else if (info.windowClassName().contains(string.toLocal8Bit()))
+                    classNamePartial << wid;
+                else if (info.visibleName().contains(string.toLocal8Bit()))
+                    titlePartial << wid;
+            }
+            if (!className.isEmpty())
+                return className.first();
+            if (!title.isEmpty())
+                return title.first();
+            if (!classPartial.isEmpty())
+                return classPartial.first();
+            if (!classNamePartial.isEmpty())
+                return classNamePartial.first();
+            if (!titlePartial.isEmpty())
+                return titlePartial.first();
         }
     }
     if (ok && KWindowSystem::hasWId(wid))
