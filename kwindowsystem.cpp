@@ -89,7 +89,7 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "* toggle <window id> <states>\n"
         "  sets or unsets certain states of a window. <states> is a comma separated list.\n";
     static const char *statesHelp = "    valid states are:\n    ------------\n"
-        "    sticky,maximized,maximized_vertically,maximized_horizontally,shaded,skiptaskbar,skippager,hidden,fullscreen,keepabove,keepbelow";
+        "    sticky,maximized,maximized_vertically,maximized_horizontally,shaded,skiptaskbar,skippager,hidden,fullscreen,keepabove,keepbelow,minimized";
     static const char *deskHelp = "Virtual desktop management\n          ---------\n"
         "* desktop list\n  print list of virtual desktops \"n: <name>\"\n\n"
         "* desktop active\n  print the number of the currently active virtual desktop\n"
@@ -368,7 +368,12 @@ int main(int argc, char **argv)
                 stateMask |= NET::KeepAbove;
             else if (state.toLower() == "keepbelow")
                 stateMask |= NET::KeepBelow;
-            else {
+            else if (state.toLower() == "minimized") {
+                if (set || (toggle && !KWindowInfo(wid, NET::WMState|NET::XAWMState).isMinimized()))
+                    KWindowSystem::minimizeWindow(wid);
+                else
+                    KWindowSystem::unminimizeWindow(wid);
+            } else {
                 error = true;
                 std::cout << "Unknown state: " << CHAR(state) << std::endl;
             }
