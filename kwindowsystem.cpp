@@ -223,7 +223,7 @@ WId window(QString string)
     }
     if (ok && KWindowSystem::hasWId(wid))
         return wid;
-    printHelp("falsewindow", toString(wid));
+    printHelp("falsewindow", string);
     return 0; // for gcc - printHelp will exit(1)
 }
 
