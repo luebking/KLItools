@@ -84,6 +84,7 @@ void printHelp(QString topic = QString(), QString parameter = QString())
     static const char *setHelp = "* set <window id> desktop <desktop id>|all\n  sets a window on a particular or \"all\" virtual desktops\n"
         "* set <window id> urgent\n  make window blink in the taskbar\n"
         "* unset <window id> urgent\n  stop window blinking in the taskbar\n"
+        "* set <window id> transientFor <main window id>\n  make first window stay on top of the second\n"
         "* set <window id> <states>\n"
         "* unset <window id> <states>\n"
         "* toggle <window id> <states>\n"
@@ -145,6 +146,8 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         std::cout << "\"set <window id> desktop <DESKTOP ID>\" expects the number or name of a desktop as last parameter" << std::endl;
     } else if (topic == "setgeometry") {
         std::cout << "\"set <window id> geometry <GEOMETRY>\" expects an X11 conformant geometry string [=][<width>{xX}<height>][{+-}<xoffset>{+-}<yoffset>]" << std::endl;
+    } else if (topic == "transient") {
+        std::cout << "\"set <window id> transientFor <window id>\" expects a second window as parameter for the main window" << std::endl;
     } else {
         std::cout << "error: " << CHAR(topic) << std::endl;
     }
@@ -182,6 +185,23 @@ int virtualDesktop(QString deskId)
     return desk < 0 ? 0 : desk;
 }
 
+void setTransient(WId sub, WId main)
+{
+#if KF5
+    QWindow *mainWindow = QWindow::fromWinId(main);
+    QWindow *subWindow->setTransientParent(sub);
+    if (subWindow)
+        subWindow->setTransientParent(mainWindow);
+#else
+    if (main)
+        XSetTransientForHint(QX11Info::display(), sub, main);
+    else
+        XDeleteProperty(QX11Info::display(), sub, XA_WM_TRANSIENT_FOR);
+#endif
+}
+
+
+
 WId window(QString string)
 {
     bool ok;
@@ -189,6 +209,8 @@ WId window(QString string)
     if (!ok) {
         if ((ok = (string == "active"))) {
             return KWindowSystem::activeWindow();
+        } else if ((ok = (string == "none"))) {
+            return 0;
         } else if ((ok = (string == "pick"))) {
             return WindowPicker().pick();
         } else {
@@ -221,7 +243,7 @@ WId window(QString string)
                 return titlePartial.first();
         }
     }
-    if (ok && KWindowSystem::hasWId(wid))
+    if (ok && (!wid || KWindowSystem::hasWId(wid)))
         return wid;
     printHelp("falsewindow", string);
     return 0; // for gcc - printHelp will exit(1)
@@ -334,6 +356,13 @@ int main(int argc, char **argv)
             }
             flags |= gravity;
             NETRootInfo(QX11Info::display(), 0).moveResizeWindowRequest(wid, flags, x, y, w, h);
+            FINISH;
+        }
+
+        if (set && command == "transientFor") {
+            if (argc < 5)
+                printHelp("settransient");
+            setTransient(wid, window(QString::fromLocal8Bit(argv[4])));
             FINISH;
         }
 
