@@ -115,23 +115,30 @@ void printHelp(QString topic = QString(), QString parameter = QString())
         "        ---------\n"
         "The <desktop id> must refer to either a valid number (counting starts with 1) or the name of a virtual desktop\n"
         "NOTICE that if it is a name, ONLY THE FIRST matching (exact and case sensitive!) virtual desktop is affected";
+    static const char *windowHelp = "Determinig a window\n          ---------\n"
+        "<window id> can be:\n"
+        "* an actual window ID (decimal or hexadecimal)\n"
+        "* an alias \"active\", \"pick\" or \"none\"\n"
+        "* a string matching either the window class (usually the appname) or the window title\n"
+        "  NOTICE that this is heuristic and the first perfect or otherwise \"best™\" match is taken\n"
+        "=> Try \"kwindowsystem list\"";
     if (topic.isEmpty() || topic == "unknowncommand") {
         std::cout << "\nUsage:\n-------------------------------\n"
         "* isComposited\n  print true or false, depending on whether a compositor is active\n"
         "* active\n  print the currently active <window id>\n"
         "* id [active]\n  print the id of the active or to be picked window\n\n"
-        "* activate <windowid>\n"
-        "* lower <windowid>\n"
-        "* raise <windowid>\n"
-        "* minimize <windowid>\n"
-        "* unminimize <windowid>\n"
-        "* close <windowid>\n"
+        "* activate <window id>\n"
+        "* lower <window id>\n"
+        "* raise <window id>\n"
+        "* minimize <window id>\n"
+        "* unminimize <window id>\n"
+        "* close <window id>\n"
         << setHelp << statesHelp <<
-        "\n\n\n  " << deskHelp << std::endl;
+        "\n\n\n  " << deskHelp << "\n\n\n  " << windowHelp << std::endl;
     } else if (topic == "falsedesk") {
         std::cout << "No such desktop: " << CHAR(parameter) << std::endl;
     } else if (topic == "falsewindow") {
-        std::cout << "No such window: " << CHAR(parameter) << std::endl;
+        std::cout << "No such window: " << CHAR(parameter) << "\n\n\n  " << windowHelp << "\n" <<  std::endl;
     } else if (topic == "nowindow") {
         std::cout << "The (sub)command " << CHAR(parameter) << " expects a window ID or \"active\" as next argument" << std::endl;
     } else if (topic == "desktop") {
